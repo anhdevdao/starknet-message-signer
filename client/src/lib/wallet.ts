@@ -78,8 +78,29 @@ export async function signMessage(message: string): Promise<string> {
 
     try {
       // For Starknet.js v4, we need to pass just the message string
-      // without any transformation
-      const signature = await wallet.account.signMessage(message);
+      const typedData = {
+        domain: {
+          name: 'Example DApp',
+          version: '1',
+          chainId: await wallet.provider.getChainId(),
+        },
+        types: {
+          StarkNetDomain: [
+            { name: 'name', type: 'felt' },
+            { name: 'version', type: 'felt' },
+            { name: 'chainId', type: 'felt' },
+          ],
+          Message: [
+            { name: 'message', type: 'felt' },
+          ],
+        },
+        primaryType: 'Message',
+        message: {
+          message: message,
+        },
+      };
+
+      const signature = await wallet.account.signMessage(typedData);
       if (!signature) {
         throw new Error("No signature returned");
       }
@@ -93,7 +114,6 @@ export async function signMessage(message: string): Promise<string> {
         message
       });
 
-      // Handle specific error cases
       if (signError instanceof Error) {
         if (signError.message.includes('timeout')) {
           throw new Error("Signing request timed out. Please try again.");
