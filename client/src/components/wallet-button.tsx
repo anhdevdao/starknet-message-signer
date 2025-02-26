@@ -13,6 +13,8 @@ export function WalletButton({ isConnected, isLoading, address, onConnect }: Wal
   const { toast } = useToast();
 
   const handleClick = () => {
+    if (isLoading) return;
+
     if (isConnected && address) {
       navigator.clipboard.writeText(address);
       toast({
@@ -38,7 +40,9 @@ export function WalletButton({ isConnected, isLoading, address, onConnect }: Wal
       )}
       {isConnected
         ? `${address?.slice(0, 6)}...${address?.slice(-4)}`
-        : "Connect Wallet"}
+        : isLoading 
+          ? "Connecting..." 
+          : "Connect Wallet"}
     </Button>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WalletButton } from "@/components/wallet-button";
 import { MessageForm } from "@/components/message-form";
 import { SignedMessage } from "@/components/signed-message";
@@ -21,6 +21,19 @@ export default function Home() {
   const [signedMessages, setSignedMessages] = useState<SignedMessageData[]>([]);
   const { toast } = useToast();
 
+  // Check wallet connection status on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const state = await connectWallet();
+        setWalletState(state);
+      } catch (error) {
+        console.error("Failed to check wallet connection:", error);
+      }
+    };
+    checkConnection();
+  }, []);
+
   const handleConnect = async () => {
     if (isConnecting) return;
 
@@ -42,6 +55,12 @@ export default function Home() {
         });
       }
     } catch (error) {
+      console.error("Wallet connection error:", error);
+      setWalletState({
+        address: null,
+        isConnected: false,
+        error: error instanceof Error ? error.message : "Failed to connect wallet",
+      });
       toast({
         variant: "destructive",
         title: "Connection failed",
@@ -71,6 +90,7 @@ export default function Home() {
         description: "Your message has been successfully signed",
       });
     } catch (error) {
+      console.error("Message signing error:", error);
       toast({
         variant: "destructive",
         title: "Signing failed",
