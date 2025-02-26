@@ -24,33 +24,58 @@ export default function Home() {
   // Check wallet connection status on mount
   useEffect(() => {
     const checkConnection = async () => {
+      if (!window.starknet) {
+        setWalletState({
+          address: null,
+          isConnected: false,
+          error: "Please install a Starknet wallet extension"
+        });
+        return;
+      }
+
       try {
         const state = await connectWallet();
         setWalletState(state);
+        if (state.error) {
+          toast({
+            variant: "destructive",
+            title: "Wallet Connection",
+            description: state.error,
+          });
+        }
       } catch (error) {
         console.error("Failed to check wallet connection:", error);
       }
     };
     checkConnection();
-  }, []);
+  }, [toast]);
 
   const handleConnect = async () => {
     if (isConnecting) return;
 
     setIsConnecting(true);
     try {
+      if (!window.starknet) {
+        toast({
+          variant: "destructive",
+          title: "Wallet Not Found",
+          description: "Please install ArgentX or Braavos wallet extension",
+        });
+        return;
+      }
+
       const state = await connectWallet();
       setWalletState(state);
 
       if (state.error) {
         toast({
           variant: "destructive",
-          title: "Connection failed",
+          title: "Connection Failed",
           description: state.error,
         });
       } else if (state.isConnected) {
         toast({
-          title: "Wallet connected",
+          title: "Connected",
           description: "Successfully connected to your wallet",
         });
       }
@@ -63,7 +88,7 @@ export default function Home() {
       });
       toast({
         variant: "destructive",
-        title: "Connection failed",
+        title: "Connection Failed",
         description: error instanceof Error ? error.message : "Failed to connect wallet",
       });
     } finally {
@@ -86,14 +111,14 @@ export default function Home() {
       ]);
 
       toast({
-        title: "Message signed",
-        description: "Your message has been successfully signed",
+        title: "Success",
+        description: "Message signed successfully",
       });
     } catch (error) {
       console.error("Message signing error:", error);
       toast({
         variant: "destructive",
-        title: "Signing failed",
+        title: "Signing Failed",
         description: error instanceof Error ? error.message : "Failed to sign message",
       });
     }

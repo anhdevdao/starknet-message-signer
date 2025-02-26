@@ -8,13 +8,22 @@ export interface WalletState {
 
 export async function connectWallet(): Promise<WalletState> {
   try {
+    // First check if a Starknet provider is available
+    if (!window.starknet) {
+      return {
+        address: null,
+        isConnected: false,
+        error: "Please install ArgentX or Braavos wallet extension"
+      };
+    }
+
     const starknet = await connect();
 
     if (!starknet) {
       return {
         address: null,
         isConnected: false,
-        error: "No wallet found. Please install ArgentX or Braavos."
+        error: "Failed to connect to wallet. Please try again."
       };
     }
 
@@ -27,22 +36,25 @@ export async function connectWallet(): Promise<WalletState> {
       };
     }
 
-    const [address] = await starknet.enable();
-    return {
-      address,
-      isConnected: true,
-      error: null
-    };
-  } catch (error) {
-    // Handle user rejection
-    if (error instanceof Error && error.message.includes('User rejected')) {
+    try {
+      const [address] = await starknet.enable();
       return {
-        address: null,
-        isConnected: false,
-        error: "Connection rejected by user"
+        address,
+        isConnected: true,
+        error: null
       };
+    } catch (enableError) {
+      if (enableError instanceof Error && enableError.message.includes('User rejected')) {
+        return {
+          address: null,
+          isConnected: false,
+          error: "Connection rejected by user"
+        };
+      }
+      throw enableError; // Re-throw other errors
     }
-
+  } catch (error) {
+    console.error("Wallet connection error:", error);
     return {
       address: null,
       isConnected: false,
@@ -53,6 +65,10 @@ export async function connectWallet(): Promise<WalletState> {
 
 export async function signMessage(message: string, address: string): Promise<string> {
   try {
+    if (!window.starknet) {
+      throw new Error("Wallet extension not found");
+    }
+
     const starknet = await connect();
     if (!starknet) {
       throw new Error("Wallet not connected");
@@ -77,6 +93,7 @@ export async function signMessage(message: string, address: string): Promise<str
 
     return signature;
   } catch (error) {
+    console.error("Message signing error:", error);
     throw new Error(error instanceof Error ? error.message : "Failed to sign message");
   }
 }
