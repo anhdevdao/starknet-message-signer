@@ -1,4 +1,4 @@
-import { connect } from '@argent/get-starknet';
+import { connect } from "get-starknet";
 
 export interface WalletState {
   address: string | null;
@@ -8,7 +8,7 @@ export interface WalletState {
 
 export async function connectWallet(): Promise<WalletState> {
   try {
-    // First check if a Starknet provider is available
+    // Check if provider exists
     if (!window.starknet) {
       return {
         address: null,
@@ -17,41 +17,43 @@ export async function connectWallet(): Promise<WalletState> {
       };
     }
 
-    const starknet = await connect();
+    // Connect to wallet
+    const wallet = await connect();
 
-    if (!starknet) {
+    if (!wallet) {
       return {
         address: null,
         isConnected: false,
-        error: "Failed to connect to wallet. Please try again."
+        error: "Failed to connect to wallet"
       };
     }
 
     // Check if already connected
-    if (starknet.isConnected && starknet.selectedAddress) {
+    if (wallet.isConnected && wallet.selectedAddress) {
       return {
-        address: starknet.selectedAddress,
+        address: wallet.selectedAddress,
         isConnected: true,
         error: null
       };
     }
 
+    // Request connection
     try {
-      const [address] = await starknet.enable();
+      await wallet.enable();
       return {
-        address,
+        address: wallet.selectedAddress || null,
         isConnected: true,
         error: null
       };
     } catch (enableError) {
-      if (enableError instanceof Error && enableError.message.includes('User rejected')) {
+      if (enableError instanceof Error && enableError.message.includes('reject')) {
         return {
           address: null,
           isConnected: false,
           error: "Connection rejected by user"
         };
       }
-      throw enableError; // Re-throw other errors
+      throw enableError;
     }
   } catch (error) {
     console.error("Wallet connection error:", error);
@@ -63,35 +65,20 @@ export async function connectWallet(): Promise<WalletState> {
   }
 }
 
-export async function signMessage(message: string, address: string): Promise<string> {
+export async function signMessage(message: string): Promise<string> {
   try {
     if (!window.starknet) {
       throw new Error("Wallet extension not found");
     }
 
-    const starknet = await connect();
-    if (!starknet) {
+    const wallet = await connect();
+    if (!wallet || !wallet.isConnected) {
       throw new Error("Wallet not connected");
     }
 
-    const signature = await starknet.account.signMessage({
-      domain: {
-        name: 'Starknet Message Signer',
-        chainId: 'SN_MAIN',
-        version: '0.0.1',
-      },
-      types: {
-        Message: [
-          { name: 'message', type: 'string' }
-        ]
-      },
-      message: {
-        message
-      },
-      primaryType: 'Message'
-    });
-
-    return signature;
+    // Using simple message signing
+    const signature = await wallet.account.signMessage(message);
+    return Array.isArray(signature) ? signature[0] : signature;
   } catch (error) {
     console.error("Message signing error:", error);
     throw new Error(error instanceof Error ? error.message : "Failed to sign message");

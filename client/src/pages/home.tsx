@@ -24,46 +24,21 @@ export default function Home() {
   // Check wallet connection status on mount
   useEffect(() => {
     const checkConnection = async () => {
-      if (!window.starknet) {
-        setWalletState({
-          address: null,
-          isConnected: false,
-          error: "Please install a Starknet wallet extension"
-        });
-        return;
-      }
-
       try {
         const state = await connectWallet();
         setWalletState(state);
-        if (state.error) {
-          toast({
-            variant: "destructive",
-            title: "Wallet Connection",
-            description: state.error,
-          });
-        }
       } catch (error) {
         console.error("Failed to check wallet connection:", error);
       }
     };
     checkConnection();
-  }, [toast]);
+  }, []);
 
   const handleConnect = async () => {
     if (isConnecting) return;
 
     setIsConnecting(true);
     try {
-      if (!window.starknet) {
-        toast({
-          variant: "destructive",
-          title: "Wallet Not Found",
-          description: "Please install ArgentX or Braavos wallet extension",
-        });
-        return;
-      }
-
       const state = await connectWallet();
       setWalletState(state);
 
@@ -81,11 +56,6 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Wallet connection error:", error);
-      setWalletState({
-        address: null,
-        isConnected: false,
-        error: error instanceof Error ? error.message : "Failed to connect wallet",
-      });
       toast({
         variant: "destructive",
         title: "Connection Failed",
@@ -97,10 +67,10 @@ export default function Home() {
   };
 
   const handleSign = async (message: string) => {
-    if (!walletState.address) return;
+    if (!walletState.isConnected) return;
 
     try {
-      const signature = await signMessage(message, walletState.address);
+      const signature = await signMessage(message);
       setSignedMessages((prev) => [
         {
           message,
