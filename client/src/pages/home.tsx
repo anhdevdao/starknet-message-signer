@@ -93,6 +93,8 @@ export default function Home() {
         description = "Signing request timed out. Please try again and confirm the transaction in your wallet.";
       } else if (errorMessage.includes("reject")) {
         description = "You rejected the signing request.";
+      } else if (errorMessage === "No signature returned") {
+        description = "Wallet did not return a signature. Please try again.";
       }
 
       toast({

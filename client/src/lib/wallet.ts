@@ -80,15 +80,32 @@ export async function signMessage(message: string): Promise<string> {
     const messageToSign = "0x" + Buffer.from(message).toString('hex');
 
     // Using basic message signing with a timeout
-    const signPromise = wallet.account.signMessage(messageToSign);
+    const signPromise = wallet.account.signMessage([messageToSign]);
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Signing timed out")), 60000)
     );
 
-    const signature = await Promise.race([signPromise, timeoutPromise]);
-    return Array.isArray(signature) ? signature[0] : signature;
+    try {
+      const signature = await Promise.race([signPromise, timeoutPromise]);
+      if (!signature) {
+        throw new Error("No signature returned");
+      }
+      return Array.isArray(signature) ? signature[0] : signature;
+    } catch (signError) {
+      console.error("Signing error details:", {
+        error: signError,
+        wallet: wallet.isConnected,
+        address: wallet.selectedAddress,
+        message: messageToSign
+      });
+      throw signError;
+    }
   } catch (error) {
-    console.error("Message signing error:", error);
+    console.error("Message signing error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw new Error(error instanceof Error ? error.message : "Failed to sign message");
   }
 }
