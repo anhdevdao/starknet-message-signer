@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { WalletButton } from "@/components/wallet-button";
 import { MessageForm } from "@/components/message-form";
 import { SignedMessage } from "@/components/signed-message";
-import { connectWallet, signMessage, type WalletState } from "@/lib/wallet";
+import { connectWallet, disconnectWallet, signMessage, type WalletState } from "@/lib/wallet";
 import { useToast } from "@/hooks/use-toast";
 
 interface SignedMessageData {
   message: string;
-  signature: string;
+  signature: Array<string>;
   timestamp: Date;
+  address: string;
 }
 
 export default function Home() {
@@ -67,7 +68,7 @@ export default function Home() {
   };
 
   const handleSign = async (message: string) => {
-    if (!walletState.isConnected) return;
+    if (!walletState.isConnected || !walletState.address) return;
 
     try {
       const signature = await signMessage(message);
@@ -76,6 +77,7 @@ export default function Home() {
           message,
           signature,
           timestamp: new Date(),
+          address: walletState.address!,
         },
         ...prev,
       ]);
@@ -105,6 +107,26 @@ export default function Home() {
     }
   };
 
+  const handleDisconnect = async () => {
+    try {
+      const state = await disconnectWallet();
+      setWalletState(state);
+      setSignedMessages([]);
+
+      toast({
+        title: "Disconnected",
+        description: "Successfully disconnected from your wallet",
+      });
+    } catch (error) {
+      console.error("Wallet disconnection error:", error);
+      toast({
+        variant: "destructive",
+        title: "Disconnection Failed",
+        description: error instanceof Error ? error.message : "Failed to disconnect wallet",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -115,6 +137,7 @@ export default function Home() {
             isLoading={isConnecting}
             address={walletState.address}
             onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
           />
         </div>
 

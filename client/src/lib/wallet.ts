@@ -6,6 +6,22 @@ export interface WalletState {
   error: string | null;
 }
 
+export interface TypedData {
+  domain: {
+    name: string;
+    version: string;
+    chainId: string;
+  };
+  types: {
+    StarkNetDomain: Array<{ name: string; type: string }>;
+    Message: Array<{ name: string; type: string }>;
+  };
+  primaryType: string;
+  message: {
+    message: string;
+  };
+}
+
 export async function connectWallet(): Promise<WalletState> {
   try {
     // Check if provider exists
@@ -65,7 +81,7 @@ export async function connectWallet(): Promise<WalletState> {
   }
 }
 
-export async function signMessage(message: string): Promise<string> {
+export async function signMessage(message: string): Promise<Array<string>> {
   try {
     if (!window.starknet) {
       throw new Error("Wallet extension not found");
@@ -105,7 +121,7 @@ export async function signMessage(message: string): Promise<string> {
         throw new Error("No signature returned");
       }
 
-      return Array.isArray(signature) ? signature[0] : signature;
+      return Array.isArray(signature) ? signature : [signature];
     } catch (signError) {
       console.error("Signing error details:", {
         error: signError,
@@ -131,5 +147,76 @@ export async function signMessage(message: string): Promise<string> {
       stack: error instanceof Error ? error.stack : undefined
     });
     throw error;
+  }
+}
+
+export async function verifyMessage(address: string, message: string, signature: Array<string>): Promise<boolean> {
+  console.log("🚀 ~ verifyMessage ~ signature:", signature)
+  try {
+    if (!window.starknet) {
+      throw new Error("Wallet extension not found");
+    }
+
+    const wallet = await connect();
+    if (!wallet) {
+      throw new Error("Failed to connect to wallet");
+    }
+
+    const typedData: TypedData = {
+      domain: {
+        name: 'Example DApp',
+        version: '1',
+        chainId: await wallet.provider.getChainId(),
+      },
+      types: {
+        StarkNetDomain: [
+          { name: 'name', type: 'felt' },
+          { name: 'version', type: 'felt' },
+          { name: 'chainId', type: 'felt' },
+        ],
+        Message: [
+          { name: 'message', type: 'felt' },
+        ],
+      },
+      primaryType: 'Message',
+      message: {
+        message: message,
+      },
+    };
+
+    const isValid = await wallet.account.verifyMessage(typedData, signature, address);
+    return isValid;
+  } catch (error) {
+    console.error("Message verification error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw error;
+  }
+}
+
+export async function disconnectWallet(): Promise<WalletState> {
+  try {
+    if (!window.starknet) {
+      return {
+        address: null,
+        isConnected: false,
+        error: null
+      };
+    }
+
+    return {
+      address: null,
+      isConnected: false,
+      error: null
+    };
+  } catch (error) {
+    console.error("Wallet disconnection error:", error);
+    return {
+      address: null,
+      isConnected: false,
+      error: error instanceof Error ? error.message : "Failed to disconnect wallet"
+    };
   }
 }
