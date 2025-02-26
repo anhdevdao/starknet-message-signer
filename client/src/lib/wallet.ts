@@ -9,11 +9,21 @@ export interface WalletState {
 export async function connectWallet(): Promise<WalletState> {
   try {
     const starknet = await connect();
+
     if (!starknet) {
       return {
         address: null,
         isConnected: false,
-        error: "Failed to connect wallet"
+        error: "No wallet found. Please install ArgentX or Braavos."
+      };
+    }
+
+    // Check if already connected
+    if (starknet.isConnected && starknet.selectedAddress) {
+      return {
+        address: starknet.selectedAddress,
+        isConnected: true,
+        error: null
       };
     }
 
@@ -24,10 +34,19 @@ export async function connectWallet(): Promise<WalletState> {
       error: null
     };
   } catch (error) {
+    // Handle user rejection
+    if (error instanceof Error && error.message.includes('User rejected')) {
+      return {
+        address: null,
+        isConnected: false,
+        error: "Connection rejected by user"
+      };
+    }
+
     return {
       address: null,
       isConnected: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
+      error: error instanceof Error ? error.message : "Failed to connect wallet"
     };
   }
 }

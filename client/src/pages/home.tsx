@@ -22,17 +22,31 @@ export default function Home() {
   const { toast } = useToast();
 
   const handleConnect = async () => {
+    if (isConnecting) return;
+
     setIsConnecting(true);
     try {
       const state = await connectWallet();
       setWalletState(state);
+
       if (state.error) {
         toast({
           variant: "destructive",
           title: "Connection failed",
           description: state.error,
         });
+      } else if (state.isConnected) {
+        toast({
+          title: "Wallet connected",
+          description: "Successfully connected to your wallet",
+        });
       }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Connection failed",
+        description: error instanceof Error ? error.message : "Failed to connect wallet",
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -51,7 +65,7 @@ export default function Home() {
         },
         ...prev,
       ]);
-      
+
       toast({
         title: "Message signed",
         description: "Your message has been successfully signed",
@@ -85,7 +99,7 @@ export default function Home() {
               isConnected={walletState.isConnected}
             />
           </div>
-          
+
           <div className="space-y-4">
             {signedMessages.map((data, index) => (
               <SignedMessage key={index} {...data} />
