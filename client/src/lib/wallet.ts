@@ -76,8 +76,16 @@ export async function signMessage(message: string): Promise<string> {
       throw new Error("Wallet not connected");
     }
 
-    // Using simple message signing
-    const signature = await wallet.account.signMessage(message);
+    // Convert message to hex format
+    const messageToSign = "0x" + Buffer.from(message).toString('hex');
+
+    // Using basic message signing with a timeout
+    const signPromise = wallet.account.signMessage(messageToSign);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Signing timed out")), 60000)
+    );
+
+    const signature = await Promise.race([signPromise, timeoutPromise]);
     return Array.isArray(signature) ? signature[0] : signature;
   } catch (error) {
     console.error("Message signing error:", error);

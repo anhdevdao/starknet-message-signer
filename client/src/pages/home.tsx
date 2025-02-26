@@ -86,10 +86,19 @@ export default function Home() {
       });
     } catch (error) {
       console.error("Message signing error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to sign message";
+      let description = errorMessage;
+
+      if (errorMessage.includes("timed out")) {
+        description = "Signing request timed out. Please try again and confirm the transaction in your wallet.";
+      } else if (errorMessage.includes("reject")) {
+        description = "You rejected the signing request.";
+      }
+
       toast({
         variant: "destructive",
         title: "Signing Failed",
-        description: error instanceof Error ? error.message : "Failed to sign message",
+        description,
       });
     }
   };
