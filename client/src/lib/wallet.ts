@@ -77,9 +77,9 @@ export async function signMessage(message: string): Promise<string> {
     }
 
     try {
-      // For Starknet.js v4, we need to pass an array of messages
-      // The message should be a string without hex conversion
-      const signature = await wallet.account.signMessage([message]);
+      // For Starknet.js v4, we need to pass just the message string
+      // without any transformation
+      const signature = await wallet.account.signMessage(message);
       if (!signature) {
         throw new Error("No signature returned");
       }
@@ -92,6 +92,16 @@ export async function signMessage(message: string): Promise<string> {
         address: wallet.selectedAddress,
         message
       });
+
+      // Handle specific error cases
+      if (signError instanceof Error) {
+        if (signError.message.includes('timeout')) {
+          throw new Error("Signing request timed out. Please try again.");
+        }
+        if (signError.message.includes('reject')) {
+          throw new Error("User rejected the signing request");
+        }
+      }
       throw signError;
     }
   } catch (error) {
@@ -100,6 +110,6 @@ export async function signMessage(message: string): Promise<string> {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined
     });
-    throw new Error(error instanceof Error ? error.message : "Failed to sign message");
+    throw error;
   }
 }
