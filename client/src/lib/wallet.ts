@@ -76,27 +76,21 @@ export async function signMessage(message: string): Promise<string> {
       throw new Error("Wallet not connected");
     }
 
-    // Convert message to hex format
-    const messageToSign = "0x" + Buffer.from(message).toString('hex');
-
-    // Using basic message signing with a timeout
-    const signPromise = wallet.account.signMessage([messageToSign]);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Signing timed out")), 60000)
-    );
-
     try {
-      const signature = await Promise.race([signPromise, timeoutPromise]);
+      // For Starknet.js v4, we need to pass an array of messages
+      // The message should be a string without hex conversion
+      const signature = await wallet.account.signMessage([message]);
       if (!signature) {
         throw new Error("No signature returned");
       }
+
       return Array.isArray(signature) ? signature[0] : signature;
     } catch (signError) {
       console.error("Signing error details:", {
         error: signError,
         wallet: wallet.isConnected,
         address: wallet.selectedAddress,
-        message: messageToSign
+        message
       });
       throw signError;
     }
